@@ -1,28 +1,28 @@
-using Plots, Random, Statistics
+using Plots, Random, Statistics, StatsPlots
 
 # Outputs
 max_M = 12
-avg_vote_volatility = zeros(max_M*5,3)
+avg_vote_volatility = zeros(max_M*5,3) # [, , num_bots]
 
 # Parameters
 κ = 100 # payoff differential sensitivity
 ℓⁱ = 0.1 # rate of individual learning
 ℓˢ = 0.1 # rate of social learning
 N = 100 # total number of agents + bots, X = [51,101,251,501,1001]
-num_games = 20 # number of games to average over
+num_games = 100 # number of games to average over
 num_turns = 500 # number of turns
 S = 2 # number of strategy tables per individual
-threshold = 55/100
+threshold = 60/100
 
 # Variables
 vote = Array{Int,1}(undef,num_turns)
 
-X = [0,5,10,15,20] #[0,5,10,15,20] # [0,5,10,15,20] #
+B = [0,1,5,10,20] #[0,5,10,15,20] # [0,5,10,15,20] #
 rng = MersenneTwister()
 
 global count = 1
-for x = 1:5
-    num_bots = X[x] # number of agents
+for b = 1:5
+    num_bots = B[b] # number of agents
     team = [zeros(Int64,Int(N/2)-num_bots); ones(Int64,Int(N/2))]
 
     num_agents = N - num_bots # number of agents
@@ -77,41 +77,37 @@ for x = 1:5
                 #     end
                 # end
 
-                # Social learning
-                update_strategy_tables = strategy_tables
-                update_virtual_points = virtual_points
-                for i=1:num_agents
-                    if ℓˢ >= rand(rng)
-                        # Find worst strategy and its points of focal player
-                        worst_points,worst_strat = findmin(virtual_points[i,:])
-                        # Select random other player and find its best strat and points
-                        player = rand(filter(x -> x ∉ [i], 1:num_agents))
-                        best_points,best_strat = findmax(virtual_points[player,:])
-                        if 1/(1+exp(κ*(worst_points-best_points))) > rand(rng)
-                            update_strategy_tables[2*(i-1)+worst_strat,:] = strategy_tables[2*(player-1)+best_strat,:]
-                            update_virtual_points[i,worst_strat] = virtual_points[player,best_strat]
-                        end
-                    end
-                end
-                strategy_tables = update_strategy_tables
-                virtual_points = update_virtual_points
+                # # Social learning
+                # update_strategy_tables = strategy_tables
+                # update_virtual_points = virtual_points
+                # for i=1:num_agents
+                #     if ℓˢ >= rand(rng)
+                #         # Find worst strategy and its points of focal player
+                #         worst_points,worst_strat = findmin(virtual_points[i,:])
+                #         # Select random other player and find its best strat and points
+                #         player = rand(filter(x -> x ∉ [i], 1:num_agents))
+                #         best_points,best_strat = findmax(virtual_points[player,:])
+                #         if 1/(1+exp(κ*(worst_points-best_points))) > rand(rng)
+                #             update_strategy_tables[2*(i-1)+worst_strat,:] = strategy_tables[2*(player-1)+best_strat,:]
+                #             update_virtual_points[i,worst_strat] = virtual_points[player,best_strat]
+                #         end
+                #     end
+                # end
+                # strategy_tables = update_strategy_tables
+                # virtual_points = update_virtual_points
 
             end
             avg_vote_volatility[count,1] += var(vote)/(num_games*N)
         end
         avg_vote_volatility[count,2] = (2^M)/N
-        avg_vote_volatility[count,3] = x
+        avg_vote_volatility[count,3] = b
         global count += 1
     end
 end
 
 avg_vote_volatility[:,3] = Int.(avg_vote_volatility[:,3])
 
-x1 = avg_vote_volatility[1:12,2]
-x2 = avg_vote_volatility[13:24,2]
-x3 = avg_vote_volatility[25:36,2]
-x4 = avg_vote_volatility[37:48,2]
-x5 = avg_vote_volatility[49:60,2]
+x = 2 .^ collect(1:M)/N
 
 y1 = avg_vote_volatility[1:12,1]
 y2 = avg_vote_volatility[13:24,1]
@@ -125,9 +121,9 @@ z3 = Int.(avg_vote_volatility[25:36,3])
 z4 = Int.(avg_vote_volatility[37:48,3])
 z5 = Int.(avg_vote_volatility[49:60,3])
 
-scatter([x1 x2 x3 x4 x5], [y1 y2 y3 y4 y5], markercolor=[z1 z2 z3 z4 z5],
-xlims=(0.01,1000), ylims=(0.001,1000), xscale=:log10, yscale=:log10,
-label=["no bots" "5 bot2" "10 bots" "15 bots" "20 bots"],
-xlabel = "\\alpha", ylabel="\\sigma ²/N", legend=:topright,
+scatter([x1 x2 x3 x4 x5], [y1 y2 y3 y4 y5], markercolor=[1 2 3 4 5],
+xlims=(0.01,100), ylims=(0.01,10), xscale=:log10, yscale=:log10,
+label=["no bots" "1 bot" "5 bots" "10 bots" "20 bots"],
+xlabel = "\\alpha", ylabel="\\sigma ²/N", legend=:bottomright,
 thickness_scaling = 1.5)
-savefig("voter_thresh_55_soc.pdf")
+savefig("voter_thresh_55.pdf")
