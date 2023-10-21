@@ -1,3 +1,4 @@
+
 using Plots, Random, Statistics
 
 # Outputs
@@ -8,16 +9,16 @@ avg_vote_volatility = zeros(max_M*5,3)
 κ = 100 # payoff differential sensitivity
 ℓⁱ = 0.1 # rate of individual learning
 ℓˢ = 0.1 # rate of social learning
-N = 100 # total number of agents + bots, X = [51,101,251,501,1001]
+N = 50 # total number of agents + bots, X = [51,101,251,501,1001]
 num_games = 20 # number of games to average over
 num_turns = 500 # number of turns
 S = 2 # number of strategy tables per individual
-threshold = 55/100
+threshold = 65/100
 
 # Variables
 vote = Array{Int,1}(undef,num_turns)
 
-X = [0,5,10,15,20] #[0,5,10,15,20] # [0,5,10,15,20] #
+X = [0,1,2,3,4] #[0,5,10,15,20] # [0,5,10,15,20] #
 rng = MersenneTwister()
 
 global count = 1
@@ -68,14 +69,14 @@ for x = 1:5
                 end
                 history = Int(mod(2*history,2^M) + majority + 1)
 
-                # # Individual learning
-                # for i=1:num_agents
-                #     if ℓⁱ > rand(rng)
-                #         new_strat = rand(rng,0:1)
-                #         strategy_tables[i+new_strat,:] = rand(rng,0:1,2^M)
-                #         virtual_points[i,new_strat+1] = 0
-                #     end
-                # end
+                # Individual learning
+                for i=1:num_agents
+                    if ℓⁱ > rand(rng)
+                        new_strat = rand(rng,0:1)
+                        strategy_tables[i+new_strat,:] = rand(rng,0:1,2^M)
+                        virtual_points[i,new_strat+1] = 0
+                    end
+                end
 
                 # Social learning
                 update_strategy_tables = strategy_tables
@@ -126,8 +127,8 @@ z4 = Int.(avg_vote_volatility[37:48,3])
 z5 = Int.(avg_vote_volatility[49:60,3])
 
 scatter([x1 x2 x3 x4 x5], [y1 y2 y3 y4 y5], markercolor=[z1 z2 z3 z4 z5],
-xlims=(0.01,1000), ylims=(0.001,1000), xscale=:log10, yscale=:log10,
-label=["no bots" "5 bot2" "10 bots" "15 bots" "20 bots"],
-xlabel = "\\alpha", ylabel="\\sigma ²/N", legend=:topright,
+xlims=(0.01,100), ylims=(0.01,100), xscale=:log10, yscale=:log10,
+label=["no bots" "1 bot" "2 bots" "3 bots" "4 bots"],
+xlabel = "\\alpha", ylabel="\\sigma ²/N", legend=:bottomright,
 thickness_scaling = 1.5)
-savefig("voter_thresh_55_soc.pdf")
+savefig("voter_thresh_65_ind_soc.pdf")

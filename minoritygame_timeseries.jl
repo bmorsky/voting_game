@@ -1,4 +1,4 @@
-using Plots, RCall, Statistics
+using Plots, Random, Statistics
 
 # Parameters
 κ = 100 # payoff differential sensitivity
