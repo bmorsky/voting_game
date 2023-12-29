@@ -70,14 +70,14 @@ for b = 1:5
                 end
                 history = Int(mod(2*history,2^M) + majority + 1)
 
-                # # Individual learning
-                # for i=1:num_agents
-                #     if ℓⁱ > rand(rng)
-                #         new_strat = rand(rng,0:1)
-                #         strategy_tables[i+new_strat,:] = rand(rng,0:1,2^M)
-                #         virtual_points[i,new_strat+1] = 0
-                #     end
-                # end
+                # Individual learning
+                for i=1:num_agents
+                    if ℓⁱ > rand(rng)
+                        new_strat = rand(rng,0:1)
+                        strategy_tables[i+new_strat,:] = rand(rng,0:1,2^M)
+                        virtual_points[i,new_strat+1] = 0
+                    end
+                end
 
                 # # Social learning
                 # update_strategy_tables = strategy_tables
