@@ -13,10 +13,11 @@ threshold = 65/100
 
 # Variables
 vote = Array{Int,1}(undef,num_turns)
+history = Array{Int,1}(undef,M) # history of the winning strategy for the last M turns
 
 # Output
+vote = Array{Int,1}(undef,num_turns)
 vote_volatility = zeros(max_M*num_games*5,2)
-avg_vote_volatility = zeros(max_M*5,2)
 
 B = [0,1,5,10,20] #[0,5,10,15,20] # [0,5,10,15,20] #
 rng = MersenneTwister()

@@ -1,66 +1,109 @@
-using Plots, Random, Statistics
+using Plots
+using Random
+using Statistics
 
 # Outputs
 max_M = 12
-avg_attendance_volatility = zeros(max_M*5,3)
+avg_attendance_volatility = zeros(max_M*4,3)
 
 # Parameters
 κ = 100 # payoff differential sensitivity
 ℓⁱ = 0.1 # rate of individual learning
 ℓˢ = 0.1 # rate of social learning
-N = 51 # total number of agents + bots, X = [51,101,251,501,1001]
-num_games = 20 # number of games to average over
+N = 120 # number of agents
+num_games = 100 # number of games to average over
 num_turns = 500 # number of turns
 S = 2 # number of strategy tables per individual
+threshold = 80/120
 
 # Variables
-attendance = Array{Int,1}(undef,num_turns)
+vote = Array{Int,1}(undef,num_turns)
 
-X = [0,1,2,3,4] #[0,5,10,15,20] # [0,5,10,15,20] #
+initial_strats = [40 40 40; 20 20 80; 20 80 20; 80 20 20]
 rng = MersenneTwister()
 
 global count = 1
-for x = 1:5
-    num_bots = X[x] # number of agents
-    num_agents = N - num_bots # number of agents
-    action = Array{Int,1}(undef,N) # actions taken: buy=1, sell=0
+for i = 1:4
     for M = 1:max_M
         for game=1:num_games
             # Initialize game
+            num_consensus_makers = initial_strats[i,1] # number of consensus makers
+            num_strategic_voters = initial_strats[i,2] # number of strategic voters
+            num_zealots = initial_strats[i,3] # number of zealots
+            consensus_votes = Int(num_consensus_makers/2)
+            strategic_voters_votes = Array{Int,1}(undef,num_strategic_voters) # votes taken: vote=1, vote=0
             history = rand(rng,1:2^M)
-            strategy_tables = rand(rng,0:1,S*num_agents,2^M) # S strategy tables for the N players
-            virtual_points = zeros(Int64,num_agents,S) # virtual points for all players' strategy tables
+            strategy_tables = rand(rng,0:1,S*num_strategic_voters,2^M) # S strategy tables for the N players
+            virtual_points = zeros(Int64,num_strategic_voters,S) # virtual points for all players' strategy tables
+            team = [zeros(Int64,Int(num_strategic_voters/2)); ones(Int64,Int(num_strategic_voters/2))]
 
             # Run simulation
-            for turn=1:num_turns
-                # Actions taken
-                for i=1:num_agents
-                    best_strat = 2*(i-1) + findmax(virtual_points[i,:])[2]
-                    action[i] = strategy_tables[best_strat,history]
+            for t=1:num_turns
+                # Votes
+                for j=1:num_strategic_voters
+                    best_strat = 2*(j-1) + findmax(virtual_points[j,:])[2]
+                    strategic_voters_votes[j] = strategy_tables[best_strat,history]
                 end
-                cur_attendance = sum(action)
-                if cur_attendance <= (N-1)/2
-                    minority = 1
+                cur_vote = Int(num_zealots/2)+consensus_votes*num_consensus_makers + sum(strategic_voters_votes)
+                if cur_vote >= N/2
+                    majority = 1
                 else
-                    minority = 0
+                    majority = 0
                 end
-                attendance[turn] = sum(action)-(N-sum(action))
-
-                # Determine virtual payoffs and win rate
-                for i=1:num_agents
-                    virtual_points[i,1] += (-1)^(minority+strategy_tables[2*i-1,history])
-                    virtual_points[i,2] += (-1)^(minority+strategy_tables[2*i,history])
+                if cur_vote >= threshold*N
+                    super_majority = 1
+                    vote[t] = 1
+                elseif cur_vote <= (1-threshold)*N
+                    super_majority = 0
+                    vote[t] = 1
+                else
+                    super_majority = -1
+                    vote[t] = 0
                 end
-                history = Int(mod(2*history,2^M) + minority + 1)
 
-                # # Individual learning
-                # for i=1:num_agents
-                #     if ℓⁱ > rand(rng)
-                #         new_strat = rand(rng,0:1)
-                #         strategy_tables[i+new_strat,:] = rand(rng,0:1,2^M)
-                #         virtual_points[i,new_strat+1] = 0
-                #     end
-                # end
+                consensus_votes = majority
+
+                # Stategic voters: determine virtual payoffs
+                if super_majority != -1
+                    for j=1:num_strategic_voters
+                        cur_team = team[j]
+                        virtual_points[j,1] += 1+(-1)^(super_majority+team[j])/2+(-1)^(super_majority+strategy_tables[2*j-1,history])/2
+                        virtual_points[j,2] += 1+(-1)^(super_majority+team[j])/2+(-1)^(super_majority+strategy_tables[2*j,history])/2
+                    end
+                else
+                    virtual_points .-= 1
+                end
+                history = Int(mod(2*history,2^M) + majority + 1)
+
+                # Individual learning
+                k = 1
+                while k <= num_strategic_voters
+                    if ℓⁱ > rand(rng)
+                        r = rand(rng,1:3)
+                        if r == 1
+                            strategy_tables = strategy_tables[1:end .!= k, :]
+                            virtual_points = virtual_points[1:end .!= k, :]
+                            if team[k] == 1
+                                num_zealots += 2
+                            end
+                            team  = team[1:end .!= k, :]
+                            k -= 1
+                            num_strategic_voters -= 1
+                        elseif r == 2
+                            new_strat = rand(rng,0:1)
+                            strategy_tables[k+new_strat,:] = rand(rng,0:1,2^M)
+                            virtual_points[k,new_strat+1] = 0
+                        else
+                            strategy_tables = strategy_tables[1:end .!= k, :]
+                            virtual_points = virtual_points[1:end .!= k, :]
+                            team  = team[1:end .!= k, :]
+                            k -= 1
+                            num_consensus_makers += 1
+                            num_strategic_voters -= 1
+                        end
+                    end
+                    k += 1
+                end
 
                 # # Social learning
                 # update_strategy_tables = strategy_tables
@@ -82,10 +125,10 @@ for x = 1:5
                 # virtual_points = update_virtual_points
 
             end
-            avg_attendance_volatility[count,1] += var(attendance)/(num_games*N)
+            avg_attendance_volatility[count,1] += mean(vote)/(num_games)
         end
         avg_attendance_volatility[count,2] = (2^M)/N
-        avg_attendance_volatility[count,3] = x
+        avg_attendance_volatility[count,3] = i
         global count += 1
     end
 end
@@ -96,23 +139,20 @@ x1 = avg_attendance_volatility[1:12,2]
 x2 = avg_attendance_volatility[13:24,2]
 x3 = avg_attendance_volatility[25:36,2]
 x4 = avg_attendance_volatility[37:48,2]
-x5 = avg_attendance_volatility[49:60,2]
 
 y1 = avg_attendance_volatility[1:12,1]
 y2 = avg_attendance_volatility[13:24,1]
 y3 = avg_attendance_volatility[25:36,1]
 y4 = avg_attendance_volatility[37:48,1]
-y5 = avg_attendance_volatility[49:60,1]
 
 z1 = Int.(avg_attendance_volatility[1:12,3])
 z2 = Int.(avg_attendance_volatility[13:24,3])
 z3 = Int.(avg_attendance_volatility[25:36,3])
 z4 = Int.(avg_attendance_volatility[37:48,3])
-z5 = Int.(avg_attendance_volatility[49:60,3])
 
-scatter([x1 x2 x3 x4 x5], [y1 y2 y3 y4 y5], markercolor=[z1 z2 z3 z4 z5],
-xlims=(0.01,1000), ylims=(0.01,100), xscale=:log10, yscale=:log10,
-label=["no bots" "1 bot" "2 bots" "3 bots" "4 bots"],
-xlabel = "\\alpha", ylabel="\\sigma ²/N", legend=:topright,
+scatter([x1 x2 x3 x4], [y1 y2 y3 y4], markercolor=[z1 z2 z3 z4],
+xlims=(0.01,1000), ylims=(0,1.1), xscale=:log10,
+label=["1/3, 1/3, 1/3" "1/6, 1/6, 2/3" "1/6, 2/3, 1/6" "2/3, 1/6, 1/6"],
+xlabel = "\\alpha", ylabel="Vote", legend=:topright,
 thickness_scaling = 1.5)
-savefig("var_soc_learn.pdf")
+savefig("vote_imitate_theta66.pdf")
