@@ -4,20 +4,20 @@ using Statistics
 
 # Outputs
 max_M = 12
-avg_attendance_volatility = zeros(max_M*4,3)
+avg_outcome = zeros(max_M*4,3)
 
 # Parameters
 κ = 100 # payoff differential sensitivity
 ℓⁱ = 0.1 # rate of individual learning
 ℓˢ = 0.1 # rate of social learning
-N = 120 # number of agents
+N = 120 # number of players
 num_games = 100 # number of games to average over
 num_turns = 500 # number of turns
-S = 2 # number of strategy tables per individual
+S = 2 # number of strategy tables per player
 threshold = 80/120
 
 # Variables
-vote = Array{Int,1}(undef,num_turns)
+outcome = Array{Int,1}(undef,num_turns)
 
 initial_strats = [40 40 40; 20 20 80; 20 80 20; 80 20 20]
 rng = MersenneTwister()
@@ -33,12 +33,9 @@ for i = 1:4
             consensus_votes = Int(num_consensus_makers/2)
             strategic_voters_votes = Array{Int,1}(undef,num_strategic_voters) # votes taken: vote=1, vote=0
             history = rand(rng,1:2^M)
-            strategy_tables = rand(rng,0:1,S*num_strategic_voters,2^M) # S strategy tables for the N players
-            virtual_points = zeros(Int64,num_strategic_voters,S) # virtual points for all players' strategy tables
-            team = [zeros(Int64,Int(num_strategic_voters/2)); ones(Int64,Int(num_strategic_voters/2))]
-
-            # Run simulation
-            for t=1:num_turns
+            strategy_tables = rand(rng,0:1,S*N,2^M) # S strategy tables for the N players
+            virtual_points = zeros(Int64,N,S) # virtual points for all players' strategy tables
+            team = rand(rng,0:1,N)
                 # Votes
                 for j=1:num_strategic_voters
                     best_strat = 2*(j-1) + findmax(virtual_points[j,:])[2]
@@ -75,13 +72,34 @@ for i = 1:4
                 end
                 history = Int(mod(2*history,2^M) + majority + 1)
 
-                # Individual learning
+                # Individual learning: zealots
+                for j = 1:num_zealots
+                    if ℓⁱ > rand(rng)
+                        r = rand(rng,1:2)
+                        if r == 1
+                            strategy_tables = vcat(strategy_tables,rand(rng,0:1,2,2^M))
+                            virtual_points = vcat(virtual_points,[0,0])
+                            team = vcat(team,zealots[j])
+                            k -= 1
+                            num_zealots -= 1
+                        else
+                            strategy_tables = strategy_tables[1:end .!= k, :]
+                            virtual_points = virtual_points[1:end .!= k, :]
+                            team  = team[1:end .!= k, :]
+                            k -= 1
+                            num_zealots -= 1
+                            num_consensus_makers += 1
+                        end
+                    end
+                    k += 1
+                end
+                # Individual learning: strategic voters
                 k = 1
                 while k <= num_strategic_voters
                     if ℓⁱ > rand(rng)
                         r = rand(rng,1:3)
                         if r == 1
-                            strategy_tables = strategy_tables[1:end .!= k, :]
+                            strategy_tables = strategy_tables
                             virtual_points = virtual_points[1:end .!= k, :]
                             if team[k] == 1
                                 num_zealots += 2
