@@ -1,8 +1,9 @@
 using Distributions, Plots, Random, Statistics
 
 # Outputs
-avg_output = Array{Float32,2}(undef,10,10)
-var_output = Array{Float32,2}(undef,10,10)
+avg_output = fill(NaN,(10,10))#10*ones(10,10) #Array{Float32,2}(10,10,10)
+var_output = fill(NaN,(10,10))#10*ones(10,10) #Array{Float32,2}(10,10,10)
+output = zeros(55,4)
 
 # Parameters
 M = 4 # memory length
@@ -15,10 +16,13 @@ S = 2 # number of strategy tables per player
 rng = MersenneTwister()
 d = Binomial(1,0.8)
 
+global count = 1
+
 for num_consensus_makers = 10:10:N-20
-    for num_strategists = 10:10:N-20-num_consensus_makers
+    for num_strategists = 10:10:N-10-num_consensus_makers
         num_zealots = N-num_consensus_makers-num_strategists
         avg_vote = zeros(num_games)
+        var_vote = zeros(num_games)
         for game=1:num_games
             # Initialize game
             consensus_votes = round(sum(rand(d,num_consensus_makers))/num_consensus_makers) # initial consensus votes
@@ -62,18 +66,30 @@ for num_consensus_makers = 10:10:N-20
                 history = Int(mod(2*history,2^M) + majority + 1)
             end
             avg_vote[game] = mean(vote)
+            var_vote[game] = var(vote)
         end
         avg_output[Int(num_strategists/10),Int(num_consensus_makers/10)] = mean(avg_vote)
-        var_output[Int(num_strategists/10),Int(num_consensus_makers/10)] = var(avg_vote)
+        var_output[Int(num_strategists/10),Int(num_consensus_makers/10)] = mean(var_vote)
+        output[count,:] = [num_consensus_makers/N,num_strategists/N,num_zealots/N,mean(avg_vote)]
+        global count = count + 1
     end
 end
 
 pyplot()
 
 heatmap(1:10, 1:10, avg_output, xlabel="Consensus makers", ylabel="Strategists", 
-colorbar_title="Votes for majority", thickness_scaling = 1.5)
+colorbar_title="Votes for majority", thickness_scaling = 1.5, clim=(0.5,1))
 savefig("static_avg_mem_$M.pdf")
 
 heatmap(1:Int(10), 1:Int(10), var_output, xlabel="Consensus makers", ylabel="Strategists", 
 colorbar_title="Votes for majority", thickness_scaling = 1.5)
 savefig("static_var_mem_$M.pdf")
+
+
+
+# ternary(output, show=true, marker=:p, image=true, cmap=makecpt(range=(0.5,1),C=:inferno), 
+# colorbar = true, vertex_labels="Consensus makers/Strategists/Zealots")
+
+# colval = makecpt(range=(0.5,1),C=:inferno)
+
+# makecpt(range=(0.5,1),C=:inferno)
