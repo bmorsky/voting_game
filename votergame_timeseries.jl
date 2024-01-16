@@ -13,7 +13,7 @@ threshold = 65/100
 
 # Variables
 vote = Array{Int,1}(undef,num_turns)
-history = Array{Int,1}(undef,M) # history of the winning strategy for the last M turns
+history = Array{Int,1}(undef,max_M) # history of the winning strategy for the last M turns
 
 # Output
 vote = Array{Int,1}(undef,num_turns)
