@@ -21,13 +21,13 @@ function χ(i) # imitation weight for each strategy
     elseif i==1 # if player is a strategist
         return 1
     else # if player is a zealot
-        return 1
+        return 0.5
     end
 end
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
-bias = 0.5 # probability that a player is of party 1
+bias = 0.1 # probability that a player is of party 1
 d = Binomial(1,bias) # binomial distribution
 
 # Run simulations for different initial conditions of consensus-makers, strategists, and zealots

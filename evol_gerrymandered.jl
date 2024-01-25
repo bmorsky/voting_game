@@ -14,6 +14,7 @@ num_turns = 300 # number of turns
 S = 2 # number of strategy tables per player
 p = 5/N # base probability δ/N of joining two nodes with mean degree δ
 μ = 0.2 # rate of immitation of others' strategies
+μᵢ = 0.01 # individual learning
 ϕ = 1 # weight of imitating the strategy of a player of the opposing party
 
 # Functions
@@ -163,6 +164,19 @@ for num_consensus_makers = 10:10:N-20
                             strategy_tables[j] = strategy_tables[neighbour] # copy the neighbour's strategy tables (only has an impact if neighbour is a strategist)
                             strategy_table_payoffs[j] = strategy_table_payoffs[neighbour] # copy the neighbour's strategy tables' payoffs
                         end
+                    end
+                end
+
+                # Individual learning
+                for i=1:N
+                    j = rand(rng,1:N)
+                    if rand(rng) < μᵢ
+                        strategy[j]=rand(0:2)
+                    if strategy[j] == 2 # if neighbour is a zealot, adjust vote to be in line with party
+                        vote[j] = party[j]
+                    end # if neighbour is not a zealot, adjust vote to be that of neighbour
+                    # strategy_tables[j] = strategy_tables[neighbour] # copy the neighbour's strategy tables (only has an impact if neighbour is a strategist)
+                    # strategy_table_payoffs[j] = strategy_table_payoffs[neighbour] # copy the neighbour's strategy tables' payoffs
                     end
                 end
 
