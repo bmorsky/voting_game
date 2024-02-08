@@ -2,32 +2,33 @@ using Distributions, Plots, Random, Statistics
 
 # Parameters
 M = 3 # memory length
-N = 120 # number of players
-num_games = 20 # number of games to average over
-num_turns = 1000 # number of turns
+N = 1200 # number of players
+num_turns = 500 # number of turns
 S = 2 # number of strategy tables per player
-p = 5/N # base probability δ/N of joining two nodes with mean degree δ
-μ = 0.2 # rate of immitation of others' strategies
+p = 1#N/N # base probability δ/N of joining two nodes with mean degree δ
+μ = 0.1 # rate of immitation of others' strategies
 μᵢ = 0.01 # individual learning
 ϕ = 0.1 # weight of imitating the strategy of a player of the opposing party
 
 # Arrays for simulation outputs
 ts_output = zeros(num_turns,4) # [num_consensus_makers, num_strategists, num_zealots, majority vote]
+ts_output0 = zeros(num_turns,4) # [num_consensus_makers, num_strategists, num_zealots, majority vote]
+ts_output1 = zeros(num_turns,4) # [num_consensus_makers, num_strategists, num_zealots, majority vote]
 
 # Functions
 function χ(i) # imitation weight for each strategy
-    if i == 0 # if player is a consensus-maker
+    if i == 1 # if player is a consensus-maker
         return 1
-    elseif i==1 # if player is a strategist
+    elseif i==2 # if player is a strategist
         return 1
     else # if player is a zealot
-        return 0.5
+        return 1
     end
 end
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
-bias = 0.1 # probability that a player is of party 1
+bias = 0.5 # probability that a player is of party 1
 d = Binomial(1,bias) # binomial distribution
 
 # Run simulations for different initial conditions of consensus-makers, strategists, and zealots
@@ -35,22 +36,26 @@ num_consensus_makers = rand(0:N)
 num_strategists = rand(0:N-num_consensus_makers)
 num_zealots = N-num_consensus_makers-num_strategists
 
-num_consensus_makers = 40
-num_strategists = 40
-num_zealots = 40
+num_consensus_makers = 600
+num_strategists = 0
+num_zealots = 600
 
 # Initialize game
 history = rand(rng,1:2^M,N) # initial history of votes
 strategy_table_payoffs = zeros(Float32,N,S) # payoffs for strategy tables, initialized to zero
 payoffs = zeros(N) # vector of payoffs for each player
-party = rand(d,N) # vector of party affiliation for each player
+# party = rand(d,N) # vector of party affiliation for each player
+party = zeros(N)
+for i=1:N
+    party[i] = mod(i,2)
+end
 strategy_tables = rand(rng,0:1,S*N,2^M) # S strategy tables for the N players (note that only strategists will use these)
 vote = rand(d,N) # vector of the votes each player makes
 # strategy is the vector of the initial strategies for each player: 0=consensus-makers, 1=strategists, 2=zealots
-strategy = vcat(zeros(Int,num_consensus_makers),ones(Int,num_strategists),2*ones(Int,num_zealots)) 
+strategy = vcat(ones(Int,num_consensus_makers),2*ones(Int,num_strategists),3*ones(Int,num_zealots)) 
 # Zealot's votes
 for j=1:N
-    if strategy[j] == 2
+    if strategy[j] == 3
         vote[j] = party[j]
     end
 end
@@ -74,8 +79,8 @@ end
 for turn=1:num_turns
     # Determine strategists' votes
     for j=1:N
-        if strategy[j] == 1
-            best_strat = 2*(j-1) + findmax(strategy_table_payoffs[j,:])[2]
+        if strategy[j] == 2
+            best_strat = S*(j-1) + findmax(strategy_table_payoffs[j,:])[2]
             vote[j] = strategy_tables[best_strat,history[j]]
         end
     end
@@ -87,11 +92,13 @@ for turn=1:num_turns
     else
         majority = 0
     end
-    ts_output[turn,:] = [sum(x->x==0,strategy)/N,sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,maximum([cur_vote,N-cur_vote])/N]
+    # ts_output[turn,:] = [sum(x->x==0,strategy)/N,sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,maximum([cur_vote,N-cur_vote])/N]
+    ts_output[turn,:] = [sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,sum(x->x==3,strategy)/N,maximum([cur_vote,N-cur_vote])/N]
+    ts_output1[turn,:] = [sum(x->x==1,strategy.*party)/N,sum(x->x==2,strategy.*party)/N,sum(x->x==3,strategy.*party)/N,cur_vote/N]
+    ts_output0[turn,:] = [sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,sum(x->x==3,strategy)/N,1] .- ts_output1[turn,:]
 
     # Stategic voters: determine payoffs for their strategy tables
     for j=1:N
-        if strategy[j] == 1
             cur_party = party[j]
             for k=1:S
                 if majority == cur_party == strategy_tables[2*j-1,history[j]]
@@ -104,7 +111,6 @@ for turn=1:num_turns
                     strategy_table_payoffs[j,k] -= 1
                 end
             end
-        end
     end
 
                 # Determine payoffs for all players
@@ -135,7 +141,7 @@ for turn=1:num_turns
                         local_majority = 0
                     end
                     history[j] = Int(mod(2*history[j],2^M) + majority + 1)
-                    if strategy[j] == 0
+                    if strategy[j] == 1
                         vote[j] = local_majority
                     end
                 end
@@ -153,7 +159,7 @@ for turn=1:num_turns
                         if imitate >= rand(rng)
                             payoffs[j] = payoffs[neighbour] # copy the nieghbour's payoffs
                             strategy[j] = strategy[neighbour] # copy the neighbour's strategy
-                            if strategy[j] == 2 # if neighbour is a zealot, adjust vote to be in line with party
+                            if strategy[j] == 3 # if neighbour is a zealot, adjust vote to be in line with party
                                 vote[j] = party[j]
                             else # if neighbour is not a zealot, adjust vote to be that of neighbour
                                 vote[j] = vote[neighbour]
@@ -169,8 +175,8 @@ for turn=1:num_turns
                     for i=1:N
                         j = rand(rng,1:N)
                         if rand(rng) < μᵢ
-                            strategy[j]=rand(0:2)
-                            if strategy[j] == 2 # if neighbour is a zealot, adjust vote to be in line with party
+                            strategy[j]=rand([1,3]) #rand(1:3)
+                            if strategy[j] == 3 # if neighbour is a zealot, adjust vote to be in line with party
                                 vote[j] = party[j]
                             end # if neighbour is not a zealot, adjust vote to be that of neighbour
                             # strategy_tables[j] = strategy_tables[neighbour] # copy the neighbour's strategy tables (only has an impact if neighbour is a strategist)
@@ -182,4 +188,16 @@ for turn=1:num_turns
 
 pyplot()
 
-plot(1:num_turns,ts_output,label=["Consensus-makers" "Strategists" "Zealots" "Majority vote"],legend=:outertopleft)
+
+out0 = [ts_output0[:,1] ts_output0[:,3]]
+out1 = [ts_output1[:,1] ts_output1[:,3]]
+out = [ts_output[:,1] ts_output[:,3]]
+
+pl0 = plot(1:num_turns,out0,label=["Consensus-makers" "Strategists" "Zealots"],legend=false)
+pl1 = plot(1:num_turns,out1,label=["Consensus-makers" "Strategists" "Zealots"],legend=false)
+pl = plot(1:num_turns,out,label=["Consensus-makers" "Strategists" "Zealots"],legend=false)
+
+
+plot(pl0, pl1, pl, layout=(3, 1))
+
+
