@@ -8,7 +8,7 @@ S = 2 # number of strategy tables per player
 p = 1#N/N # base probability δ/N of joining two nodes with mean degree δ
 μ = 0.1 # rate of immitation of others' strategies
 μᵢ = 0.01 # individual learning
-ϕ = 0.1 # weight of imitating the strategy of a player of the opposing party
+ϕ = 1 # weight of imitating the strategy of a player of the opposing party
 
 # Arrays for simulation outputs
 ts_output = zeros(num_turns,4) # [num_consensus_makers, num_strategists, num_zealots, majority vote]
@@ -199,5 +199,6 @@ pl = plot(1:num_turns,out,label=["Consensus-makers" "Strategists" "Zealots"],leg
 
 
 plot(pl0, pl1, pl, layout=(3, 1))
+plot(1:num_turns,ts_output,label=["Consensus-makers" "Strategists" "Zealots"],legend=false)
 
 
