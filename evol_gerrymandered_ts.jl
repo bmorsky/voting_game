@@ -1,7 +1,7 @@
 using Distributions, Plots, Random, Statistics
 
 # Parameters
-M = 3 # memory length
+M = 2 # memory length
 N = 1200 # number of players
 num_turns = 500 # number of turns
 S = 2 # number of strategy tables per player
@@ -11,9 +11,9 @@ p = 1#N/N # base probability δ/N of joining two nodes with mean degree δ
 ϕ = 1 # weight of imitating the strategy of a player of the opposing party
 
 # Arrays for simulation outputs
-ts_output = zeros(num_turns,4) # [num_consensus_makers, num_strategists, num_zealots, majority vote]
-ts_output0 = zeros(num_turns,4) # [num_consensus_makers, num_strategists, num_zealots, majority vote]
-ts_output1 = zeros(num_turns,4) # [num_consensus_makers, num_strategists, num_zealots, majority vote]
+ts_output = zeros(num_turns,5) # [num_consensus_makers, num_strategists, num_zealots, num_gridlockers, majority vote]
+ts_output0 = zeros(num_turns,5) # [num_consensus_makers, num_strategists, num_zealots, num_gridlockers, majority vote]
+ts_output1 = zeros(num_turns,5) # [num_consensus_makers, num_strategists, num_zealots, num_gridlockers, majority vote]
 
 # Functions
 function χ(i) # imitation weight for each strategy
@@ -36,9 +36,10 @@ num_consensus_makers = rand(0:N)
 num_strategists = rand(0:N-num_consensus_makers)
 num_zealots = N-num_consensus_makers-num_strategists
 
-num_consensus_makers = 600
-num_strategists = 0
-num_zealots = 600
+num_consensus_makers = 300
+num_strategists = 300
+num_zealots = 300
+num_gridlockers = 300
 
 # Initialize game
 history = rand(rng,1:2^M,N) # initial history of votes
@@ -51,8 +52,8 @@ for i=1:N
 end
 strategy_tables = rand(rng,0:1,S*N,2^M) # S strategy tables for the N players (note that only strategists will use these)
 vote = rand(d,N) # vector of the votes each player makes
-# strategy is the vector of the initial strategies for each player: 0=consensus-makers, 1=strategists, 2=zealots
-strategy = vcat(ones(Int,num_consensus_makers),2*ones(Int,num_strategists),3*ones(Int,num_zealots)) 
+# strategy is the vector of the initial strategies for each player: 1=consensus-makers, 2=strategists, 3=zealots, 4=gridlockers
+strategy = vcat(ones(Int,num_consensus_makers),2*ones(Int,num_strategists),3*ones(Int,num_zealots),4*ones(Int,num_gridlockers)) 
 # Zealot's votes
 for j=1:N
     if strategy[j] == 3
@@ -93,9 +94,9 @@ for turn=1:num_turns
         majority = 0
     end
     # ts_output[turn,:] = [sum(x->x==0,strategy)/N,sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,maximum([cur_vote,N-cur_vote])/N]
-    ts_output[turn,:] = [sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,sum(x->x==3,strategy)/N,maximum([cur_vote,N-cur_vote])/N]
-    ts_output1[turn,:] = [sum(x->x==1,strategy.*party)/N,sum(x->x==2,strategy.*party)/N,sum(x->x==3,strategy.*party)/N,cur_vote/N]
-    ts_output0[turn,:] = [sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,sum(x->x==3,strategy)/N,1] .- ts_output1[turn,:]
+    ts_output[turn,:] = [sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,sum(x->x==3,strategy)/N,sum(x->x==4,strategy)/N,maximum([cur_vote,N-cur_vote])/N]
+    ts_output1[turn,:] = [sum(x->x==1,strategy.*party)/N,sum(x->x==2,strategy.*party)/N,sum(x->x==3,strategy.*party)/N,sum(x->x==4,strategy.*party)/N,cur_vote/N]
+    ts_output0[turn,:] = [sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,sum(x->x==3,strategy)/N,sum(x->x==4,strategy)/N,1] .- ts_output1[turn,:]
 
     # Stategic voters: determine payoffs for their strategy tables
     for j=1:N
@@ -113,27 +114,39 @@ for turn=1:num_turns
             end
     end
 
-                # Determine payoffs for all players
-                for j=1:N
-                    if sum(vote[adjacency_matrix[j]]) > length(adjacency_matrix[j])/2
-                        local_majority = 1
-                    else
-                        local_majority = 0
-                    end
-                    cur_party = party[j]
-                    cur_vote = vote[j]
-                    if local_majority == cur_party == cur_vote
-                        payoffs[j] += 1
-                    elseif local_majority == cur_vote != cur_party
-                        payoffs[j] += 1/2
-                    elseif local_majority != cur_party == cur_vote
-                        payoffs[j] -= 1/2
-                    else
-                        payoffs[j] -= 1
-                    end
-                end
+    # Determine payoffs for all players
+    for j=1:N
+        if sum(vote[adjacency_matrix[j]]) > length(adjacency_matrix[j])/2
+            local_majority = 1
+        else
+            local_majority = 0
+        end
+        cur_party = party[j]
+        cur_vote = vote[j]
+        if strategy[j] < 4 # for those who value consensus (note this includes zealots)
+            if local_majority == cur_party == cur_vote
+                payoffs[j] += 1
+            elseif local_majority == cur_vote != cur_party
+                payoffs[j] += 1/2
+            elseif local_majority != cur_party == cur_vote
+                payoffs[j] -= 1/2
+            else
+                payoffs[j] -= 1
+            end
+        else # for those who value consensus (note this includes zealots)
+            if local_majority != cur_party == cur_vote
+                payoffs[j] += 1
+            elseif local_majority != cur_vote != cur_party
+                payoffs[j] += 1/2
+            elseif local_majority == cur_party == cur_vote
+                payoffs[j] -= 1/2
+            else
+                payoffs[j] -= 1
+            end
+        end
+    end
 
-                # Determine local history for each player and thus consensus makers' votes
+                # Determine local history for each player and thus consensus-makers' and gridlockers' votes
                 for j=1:N
                     if sum(vote[adjacency_matrix[j]]) > length(adjacency_matrix[j])/2
                         local_majority = 1
@@ -141,8 +154,11 @@ for turn=1:num_turns
                         local_majority = 0
                     end
                     history[j] = Int(mod(2*history[j],2^M) + majority + 1)
-                    if strategy[j] == 1
+                    if strategy[j] == 1 # if player is a consensus-maker, vote the same as local majority
                         vote[j] = local_majority
+                    end
+                    if strategy[j] == 4 # if player is a gridlocker, vote the opposite as local majority
+                        vote[j] = mod(local_majority+1,2)
                     end
                 end
 
@@ -172,33 +188,33 @@ for turn=1:num_turns
                 end
 
                     # Individual learning
-                    for i=1:N
-                        j = rand(rng,1:N)
-                        if rand(rng) < μᵢ
-                            strategy[j]=rand([1,3]) #rand(1:3)
-                            if strategy[j] == 3 # if neighbour is a zealot, adjust vote to be in line with party
-                                vote[j] = party[j]
-                            end # if neighbour is not a zealot, adjust vote to be that of neighbour
-                            # strategy_tables[j] = strategy_tables[neighbour] # copy the neighbour's strategy tables (only has an impact if neighbour is a strategist)
-                            # strategy_table_payoffs[j] = strategy_table_payoffs[neighbour] # copy the neighbour's strategy tables' payoffs
-                        end
-                    end
+                    # for i=1:N
+                    #     j = rand(rng,1:N)
+                    #     if rand(rng) < μᵢ
+                    #         strategy[j]=rand(1:3) #rand(1:3)
+                    #         if strategy[j] == 3 # if neighbour is a zealot, adjust vote to be in line with party
+                    #             vote[j] = party[j]
+                    #         end # if neighbour is not a zealot, adjust vote to be that of neighbour
+                    #         # strategy_tables[i] = strategy_tables[j] # copy the neighbour's strategy tables (only has an impact if neighbour is a strategist)
+                    #         # strategy_table_payoffs[i] = strategy_table_payoffs[j] # copy the neighbour's strategy tables' payoffs
+                    #     end
+                    # end
 
             end
 
 pyplot()
 
 
-out0 = [ts_output0[:,1] ts_output0[:,3]]
-out1 = [ts_output1[:,1] ts_output1[:,3]]
-out = [ts_output[:,1] ts_output[:,3]]
+out0 = [ts_output0[:,1] ts_output0[:,4]]
+out1 = [ts_output1[:,1] ts_output1[:,4]]
+out = [ts_output[:,1] ts_output[:,4]]
 
-pl0 = plot(1:num_turns,out0,label=["Consensus-makers" "Strategists" "Zealots"],legend=false)
-pl1 = plot(1:num_turns,out1,label=["Consensus-makers" "Strategists" "Zealots"],legend=false)
-pl = plot(1:num_turns,out,label=["Consensus-makers" "Strategists" "Zealots"],legend=false)
+pl0 = plot(1:num_turns,out0,label=["Consensus-makers" "Strategists" "Zealots" "Gridlockers"],legend=false)
+pl1 = plot(1:num_turns,out1,label=["Consensus-makers" "Strategists" "Zealots" "Gridlockers"],legend=false)
+pl = plot(1:num_turns,out,label=["Consensus-makers" "Strategists" "Zealots" "Gridlockers"],legend=false)
 
 
-plot(pl0, pl1, pl, layout=(3, 1))
-plot(1:num_turns,ts_output,label=["Consensus-makers" "Strategists" "Zealots"],legend=false)
+plot(pl0, pl1, pl, layout=(4, 1))
+plot(1:num_turns,ts_output,label=["Consensus-makers" "Strategists" "Zealots" "Gridlockers"],legend=false)
 
 
