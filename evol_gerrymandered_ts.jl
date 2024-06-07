@@ -28,7 +28,7 @@ end
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
-bias = 0.5 # probability that a player is of party 1
+bias = 0.7 # probability that a player is of party 1
 d = Binomial(1,bias) # binomial distribution
 
 # Run simulations for different initial conditions of consensus-makers, strategists, and zealots
@@ -46,11 +46,11 @@ num_zealot_gridlockers = 200
 history = rand(rng,1:2^M,N) # initial history of votes
 strategy_table_payoffs = zeros(Float32,N,S) # payoffs for strategy tables, initialized to zero
 payoffs = zeros(N) # vector of payoffs for each player
-# party = rand(d,N) # vector of party affiliation for each player
-party = zeros(N)
-for i=1:N
-    party[i] = mod(i,2)
-end
+party = rand(d,N) # vector of party affiliation for each player
+# party = zeros(N)
+# for i=1:N
+#     party[i] = mod(i,2)
+# end
 strategy_tables = rand(rng,0:1,S*N,2^M) # S strategy tables for the N players (note that only strategists will use these)
 vote = rand(d,N) # vector of the votes each player makes
 # strategy is the vector of the initial strategies for each player: 1=consensus-makers, 2=strategists, 3=zealots, 4=gridlockers, 5=zealotgridlockers
