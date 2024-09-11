@@ -1,22 +1,14 @@
-using Distributions, Plots, Random, Statistics, Graphs
-
-#Add gridlock prefered,
-# Consider the big 8 \times 8 adjacency_matrix
-# Consider ways to show results like different graph types, heat maps
-#
-#Add wattz strogatz
-# Experiments 
-#1 are consensus maker
+using Distributions, Plots, Random, Statistics
 
 # Parameters
 M = 2 # memory length
-N = 1000 # number of players
-num_turns = 250 # number of turns
+N = 500 # number of players
+num_turns = 200 # number of turns
 S = 2 # number of strategy tables per player
 p = 0.01 #N/N # base probability δ/N of joining two nodes with mean degree δ
 μ = 1 # rate of immitation of others' strategies
 μᵢ =.01 # individual learning
-ϕ =0 # weight of imitating the strategy of a player of the opposing party
+ϕ = 0 # weight of imitating the strategy of a player of the opposing party
 
 # Arrays for simulation outputs
 ts_output = zeros(num_turns,6) # [num_consensus_makers, num_strategists, num_zealots, num_gridlockers, majority vote]
@@ -52,6 +44,15 @@ num_zealots = 200 #200
 num_gridlockers = 200 #200
 num_zealot_gridlockers =200 #200
 
+
+# for num_consensus_makers = 10:10:N-20
+#     for num_strategists = 10:10:N-10-num_consensus_makers
+#         num_zealots = N-num_consensus_makers-num_strategists
+#         avg_vote = zeros(num_games)
+#         var_vote = zeros(num_games)
+# for game=1:num_games
+
+
 # Initialize game
 history = rand(rng,1:2^M,N) # initial history of votes
 strategy_table_payoffs = zeros(Float32,N,S) # payoffs for strategy tables, initialized to zero
@@ -86,26 +87,6 @@ for i=1:N-1
         end
     end
 end
-
-# # Generate Watts-Strogatz random graph
-# adjacency_matrix = [[] for i = 1:N]
-# k = 4 # Each node is joined with its `k` nearest neighbors in a ring topology
-# β = .1 # The probability of rewiring each edge
-# for i = 1:N
-#     for j = i + 1:i + k
-#         ii = mod1(i, N)
-#         jj = mod1(j, N)
-#         if rand(rng) < β
-#             random_node = rand(1:N)
-#             push!(adjacency_matrix[ii], random_node)
-#             push!(adjacency_matrix[random_node], ii)
-#         else
-#             push!(adjacency_matrix[ii], jj)
-#             push!(adjacency_matrix[jj], ii)
-#         end
-#     end
-# end
-
 
 # Run a single realization
 for turn=1:num_turns
