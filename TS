@@ -14,8 +14,7 @@ N = 1000 # number of players
 num_turns = 250 # number of turns
 S = 2 # number of strategy tables per player
 p = 0.1 #N/N # base probability δ/N of joining two nodes with mean degree δ
-μ = 1 # rate of immitation of others' strategies
-μᵢ =.01 # individual learning
+μ =.01 # individual learning
 ϕ =0 # weight of imitating the strategy of a player of the opposing party
 
 # Arrays for simulation outputs
@@ -88,26 +87,6 @@ for i=1:N-1
         end
     end
 end
-
-# # Generate Watts-Strogatz random graph
-# adjacency_matrix = [[] for i = 1:N]
-# k = 4 # Each node is joined with its k closest neighbours
-# β = .1 # The probability of rewiring each edge
-# for i = 1:N
-#     for j = i + 1:i + k
-#         ii = mod1(i, N)
-#         jj = mod1(j, N)
-#         if rand(rng) < β
-#             random_node = rand(1:N)
-#             push!(adjacency_matrix[ii], random_node)
-#             push!(adjacency_matrix[random_node], ii)
-#         else
-#             push!(adjacency_matrix[ii], jj)
-#             push!(adjacency_matrix[jj], ii)
-#         end
-#     end
-# end
-
 
 # Run a single realization
 for turn=1:num_turns
@@ -213,7 +192,7 @@ for turn=1:num_turns
                 # Imitate others
                 for i=1:N
                     j = rand(rng,1:N)
-                    if rand(rng) < μ && adjacency_matrix[j] != [] # imitate a randomly selected neighbour with probability μ
+                    if adjacency_matrix[j] != [] # imitate a randomly selected neighbour with probability μ
                         neighbour = rand(adjacency_matrix[j])
                         if party[j]==party[neighbour]
                             imitate=(2+mean(payoffs[neighbour])-mean(payoffs[j]))/4 # probability of imitating a neighbour of the same party
@@ -238,7 +217,7 @@ for turn=1:num_turns
                     # Individual learning
                     for i=1:N
                         j = rand(rng,1:N)
-                        if rand(rng) < μᵢ
+                        if rand(rng) < μ
                             strategy[j]=rand(1:5) #rand(1:3)
                             if strategy[j] == 3 # if neighbour is a zealot, adjust vote to be in line with party
                                 vote[j] = party[j]

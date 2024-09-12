@@ -13,7 +13,7 @@ q = 0.01 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
 β = 0.5 # party affiliation bias
 μ = 0.01 # individual learning
-ϕ = 0 # weight of imitating the strategy of a player of the opposing party
+ϕ = 1 # weight of imitating the strategy of a player of the opposing party
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
