@@ -91,7 +91,7 @@ for t=1:T
     ts_output_red[t,:] = [sum(x->x==1,strategy.*party)/N,sum(x->x==2,strategy.*party)/N,sum(x->x==3,strategy.*party)/N,sum(x->x==4,strategy.*party)/N,sum(x->x==5,strategy.*party)/N,sum(x->x==6,strategy.*party)/N,sum(x->x==7,strategy.*party)/N]
     ts_output_blue[t,:] = [sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,sum(x->x==3,strategy)/N,sum(x->x==4,strategy)/N,sum(x->x==5,strategy)/N,sum(x->x==6,strategy)/N,sum(x->x==7,strategy)/N] .- ts_output_red[t,:]
 
-    # Determine patyoffs for strategy tables
+    # Determine payoffs for strategy tables
     for j=1:N
         cur_party = party[j]
         for k=1:S
@@ -168,6 +168,8 @@ for t=1:T
     # Imitate others
     shadow_payoffs = deepcopy(payoffs)
     shadow_strategy = deepcopy(strategy)
+    shadow_strategy_tables = deepcopy(strategy_tables)
+    shadow_strategy_table_payoffs = deepcopy(strategy_table_payoffs)
     for i=1:N
         if adjacency_matrix[i] != [] # imitate a randomly selected neighbour
             neighbour = rand(adjacency_matrix[i])
@@ -179,18 +181,16 @@ for t=1:T
             if rand(rng) ≤ imitate
                 shadow_payoffs[i] = payoffs[neighbour] # copy the nieghbour's payoffs
                 shadow_strategy[i] = strategy[neighbour] # copy the neighbour's strategy
-                if strategy[j] == 3 # if neighbour is a zealot, adjust vote to be in line with party
-                    vote[j] = party[j]
-                else # if neighbour is not a zealot, adjust vote to be that of neighbour
-                    vote[j] = vote[neighbour]
+                if strategy[neighbour] ∈ [5 6 7] # if neighbour is a zealot, adjust vote to be in line with party
+                    vote[i] = party[i]
                 end
-                # party[j] = party[neighbour] # this is commented out, since we assume that players don't change parties
-                strategy_tables[j] = strategy_tables[neighbour] # copy the neighbour's strategy tables (only has an impact if neighbour is a strategist)
-                strategy_table_payoffs[j] = strategy_table_payoffs[neighbour] # copy the neighbour's strategy tables' payoffs
             end
         end
     end
+    payoffs = deepcopy(shadow_payoffs)
     strategy = deepcopy(shadow_strategy)
+    strategy_tables = deepcopy(shadow_strategy_tables)
+    strategy_table_payoffs = deepcopy(shadow_strategy_table_payoffs)
 
     # Mutation
     for i=1:N
