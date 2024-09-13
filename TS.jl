@@ -3,13 +3,13 @@ using Distributions, Plots, Random, Statistics
 # Parameters
 M = 3 # memory length
 N = 350 # number of players
-T = 250 # number of turns
+T = 1000 # number of turns
 p = 0.02 # probability of joining two players of the same party
 q = 0.02 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.5 # party affiliation bias
+β = 0.8 # party affiliation bias
 μ = 0.01 # individual learning
-ϕ = 0.0 # weight of imitating the strategy of a player of the opposing party
+ϕ = 1.0 # weight of imitating the strategy of a player of the opposing party
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
@@ -62,11 +62,8 @@ end
 for t=1:T
     # Determine Chartists' votes
     for i=1:N
-        if strategy[i] == 1 # if consensus-pref
+        if strategy[i] ∈ [1 2] # if consensus-pref
             best_strat = S*(i-1) + findmax(strategy_table_payoffs[i,:])[2]
-            vote[i] = strategy_tables[best_strat,local_history[i]]
-        elseif strategy[i] == 2 # if gridlock-pref
-            best_strat = S*(i-1) + findmin(strategy_table_payoffs[i,:])[2]
             vote[i] = strategy_tables[best_strat,local_history[i]]
         end
     end
@@ -90,16 +87,31 @@ for t=1:T
 
     # Determine payoffs for strategy tables
     for i=1:N
-        cur_party = party[i]
-        for j=1:S
-            if majority == cur_party == strategy_tables[2*i-1,local_history[i]]
-                strategy_table_payoffs[i,j] += 1
-            elseif majority == strategy_tables[2*i-1,local_history[i]] != cur_party
-                strategy_table_payoffs[i,j] += 1/2
-            elseif majority != cur_party == strategy_tables[2*i-1,local_history[i]]
-                strategy_table_payoffs[i,j] -= 1/2
-            else
-                strategy_table_payoffs[i,j] -= 1
+        if strategy[i] == 1 # if consensus-pref Chartist
+            cur_party = party[i]
+            for j=1:S
+                if majority == cur_party == strategy_tables[2*i-1,local_history[i]]
+                    strategy_table_payoffs[i,j] += 1
+                elseif majority == strategy_tables[2*i-1,local_history[i]] != cur_party
+                    strategy_table_payoffs[i,j] += 1/2
+                elseif majority != cur_party == strategy_tables[2*i-1,local_history[i]]
+                    strategy_table_payoffs[i,j] -= 1/2
+                else
+                    strategy_table_payoffs[i,j] -= 1
+                end
+            end
+        elseif strategy[i] == 2 # if gridlock-pref Chartist
+            cur_party = party[i]
+            for j=1:S
+                if majority == cur_party == strategy_tables[2*i-1,local_history[i]]
+                    strategy_table_payoffs[i,j] -= 1/2
+                elseif majority == strategy_tables[2*i-1,local_history[i]] != cur_party
+                    strategy_table_payoffs[i,j] -= 1
+                elseif majority != cur_party == strategy_tables[2*i-1,local_history[i]]
+                    strategy_table_payoffs[i,j] += 1/2
+                else
+                    strategy_table_payoffs[i,j] += 1
+                end
             end
         end
     end
@@ -115,33 +127,29 @@ for t=1:T
         cur_vote = vote[j]
         if strategy[j] ∈ [1 3 5] # for those who value consensus (consensus-pref Chartists, Consensus-makers, consensus-pref Zealots)
             if local_majority == cur_party == cur_vote
-                payoffs[j] += local_majority - 1/2 # 1
+                payoffs[j] = 1 #local_majority - 1/2 # 1
             elseif local_majority == cur_vote != cur_party
-                payoffs[j] += (local_majority - 1/2)/2 # 1/2
+                payoffs[j] = 1/2 #(local_majority - 1/2)/2 # 1/2
             elseif local_majority != cur_party == cur_vote
-                payoffs[j] -= (local_majority - 1/2)/2 # 1/2
+                payoffs[j] = -1/2 #(local_majority - 1/2)/2 # 1/2
             else
-                payoffs[j] -= local_majority - 1/2 # 1
+                payoffs[j] = -1 #local_majority - 1/2 # 1
             end
         elseif strategy[j] ∈ [2 4 6]  # for those who value gridlock (gridlock-pref Chartists, Gridlockers, gridlock-pref Zealots)
-            if local_majority != cur_party == cur_vote
-                payoffs[j] += 1 - local_majority # 1
-            elseif local_majority != cur_vote != cur_party
-                payoffs[j] += (1 - local_majority)/2 # 1/2
-            elseif local_majority == cur_party == cur_vote
-                payoffs[j] -= (1 - local_majority)/2 # 1/2
+            if local_majority == cur_party == cur_vote
+                payoffs[j] = -1/2 #1 - local_majority # 1
+            elseif local_majority == cur_vote != cur_party
+                payoffs[j] = -1 #(1 - local_majority)/2 # 1/2
+            elseif local_majority != cur_party == cur_vote
+                payoffs[j] = 1/2 #(1 - local_majority)/2 # 1/2
             else
-                payoffs[j] -= 1 - local_majority # 1
+                payoffs[j] = 1 #1 - local_majority # 1
             end
         else # party-pref Zealots
-            if local_majority == cur_party == cur_vote
-                payoffs[j] += local_majority - 1/2 # 1
-            elseif local_majority !== cur_vote == cur_party
-                payoffs[j] += (1 - local_majority)/2 # 1/2
-            elseif local_majority != cur_party != cur_vote
-                payoffs[j] -= (1 - local_majority)/2 # 1/2
+            if local_majority == cur_party
+                payoffs[j] = 1 #local_majority - 1/2 # 1
             else
-                payoffs[j] -= local_majority - 1/2 # 1
+                payoffs[j] = -1 #local_majority - 1/2 # 1
             end
         end
     end
@@ -171,9 +179,34 @@ for t=1:T
         if adjacency_matrix[i] != [] # imitate a randomly selected neighbour
             neighbour = rand(adjacency_matrix[i])
             if party[i]==party[neighbour]
-                imitate=(2+mean(payoffs[neighbour])-mean(payoffs[i]))/4 # probability of imitating a neighbour of the same party
+                imitate=(2+payoffs[neighbour]-payoffs[i])/4 # probability of imitating a neighbour of the same party
             else
-                imitate=ϕ*(2+mean(payoffs[neighbour])-mean(payoffs[i]))/4 # probability of imitating a neighbour of a different party
+                if strategy[neighbour] ∈ [1 3 5]
+                    if payoffs[neighbour] == 1
+                        neighbour_payoff = 1/2
+                    elseif payoffs[neighbour] == -1
+                        neighbour_payoff = -1/2
+                    elseif payoffs[neighbour] == -1/2
+                        neighbour_payoff = -1
+                    else payoffs[neighbour] == 1/2
+                        neighbour_payoff = 1
+                    end
+                    imitate=ϕ*(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
+                elseif strategy[neighbour] ∈ [2 4 6]
+                    if payoffs[neighbour] == -1/2
+                        neighbour_payoff = -1
+                    elseif payoffs[neighbour] == 1/2
+                        neighbour_payoff = 1
+                    elseif payoffs[neighbour] == 1
+                        neighbour_payoff = 1/2
+                    else payoffs[neighbour] == -1
+                        neighbour_payoff = -1/2
+                    end
+                    imitate=ϕ*(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
+                else
+                    neighbour_payoff = -payoffs[neighbour]
+                    imitate=ϕ*(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
+                end
             end
             if rand(rng) ≤ imitate
                 shadow_payoffs[i] = payoffs[neighbour] # copy the nieghbour's payoffs
@@ -193,7 +226,10 @@ for t=1:T
     for i=1:N
         if rand() ≤ μ
             strategy[i]=rand(1:7)
-            if strategy[i] ∈ [5 6 7] # if neighbour is a zealot, adjust vote to be in line with party
+            if strategy[i] ∈ [1 2]
+                strategy_tables[S*i-1,:] = rand(rng,0:1,2^M)
+                strategy_tables[S*i,:] = rand(rng,0:1,2^M)
+            elseif strategy[i] ∈ [5 6 7] # if neighbour is a zealot, adjust vote to be in line with party
                 vote[i] = party[i]
             end
         end
@@ -203,7 +239,7 @@ end
 
 pyplot()
 ts_output = ts_output_blue .+ ts_output_red
-pl_blue = plot(1:T,hcat(ts_output_blue,ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
-pl_red = plot(1:T,hcat(ts_output_red,ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
+pl_blue = plot(1:T,hcat(ts_output_blue*N/(N-sum(party)),ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
+pl_red = plot(1:T,hcat(ts_output_red*N/sum(party),ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
 pl = plot(1:T,hcat(ts_output,ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
 plot(pl_blue, pl_red, pl, layout=(3, 1))
