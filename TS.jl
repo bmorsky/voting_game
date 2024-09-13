@@ -4,12 +4,12 @@ using Distributions, Plots, Random, Statistics
 M = 3 # memory length
 N = 350 # number of players
 T = 250 # number of turns
-p = 0.01 # probability of joining two players of the same party
-q = 0.01 # probability of joining two players of the different party
+p = 0.02 # probability of joining two players of the same party
+q = 0.02 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.8 # party affiliation bias
+β = 0.5 # party affiliation bias
 μ = 0.01 # individual learning
-ϕ = 0.1 # weight of imitating the strategy of a player of the opposing party
+ϕ = 0.0 # weight of imitating the strategy of a player of the opposing party
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
@@ -104,7 +104,7 @@ for t=1:T
         end
     end
 
-    # Determine payoffs for all consensus preferred players
+    # Determine payoffs
     for j=1:N
         if sum(vote[adjacency_matrix[j]]) > length(adjacency_matrix[j])/2
             local_majority = 1
