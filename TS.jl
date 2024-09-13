@@ -7,17 +7,17 @@ T = 250 # number of turns
 p = 0.01 # probability of joining two players of the same party
 q = 0.01 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.5 # party affiliation bias
+β = 0.8 # party affiliation bias
 μ = 0.01 # individual learning
-ϕ = 1 # weight of imitating the strategy of a player of the opposing party
+ϕ = 0.1 # weight of imitating the strategy of a player of the opposing party
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
 dist = Binomial(1,β) # binomial distribution
 
 # Arrays for simulation outputs: [consensus Chartist, gridlock Chartist, Consensus-maker, Gridlocker, consensus Zealot, gridlock Zealot, party Zealot, majority vote]
-ts_output_blue = zeros(T,6) # Blue affiliated
-ts_output_red = zeros(T,6) # Red affiliated
+ts_output_blue = zeros(T,7) # Blue affiliated
+ts_output_red = zeros(T,7) # Red affiliated
 ts_output_majority = zeros(T)
 
 # Run simulations for different initial distributions of player types
@@ -35,7 +35,7 @@ strategy_table_payoffs = zeros(Float32,N,S) # payoffs for strategy tables, initi
 payoffs = zeros(N) # vector of payoffs for each player
 party = zeros(N)
 for i=1:N
-    party[i] = mod(i,2)
+    party[i] = rand(dist)#mod(i,2)
 end
 strategy_tables = rand(rng,0:1,S*N,2^M) # S strategy tables for the N players (note that only strategists will use these)
 vote = copy(party) # vector of the votes each player makes
@@ -61,13 +61,13 @@ end
 # Run a single realization
 for t=1:T
     # Determine Chartists' votes
-    for j=1:N
-        if strategy[j] == 1 # if consensus-pref
-            best_strat = S*(j-1) + findmax(strategy_table_payoffs[j,:])[2]
-            vote[j] = strategy_tables[best_strat,local_history[j]]
-        if strategy[j] == 2 # if gridlock-pref
-            best_strat = S*(j-1) + findmin(strategy_table_payoffs[j,:])[2]
-            vote[j] = strategy_tables[best_strat,local_history[j]]
+    for i=1:N
+        if strategy[i] == 1 # if consensus-pref
+            best_strat = S*(i-1) + findmax(strategy_table_payoffs[i,:])[2]
+            vote[i] = strategy_tables[best_strat,local_history[i]]
+        elseif strategy[i] == 2 # if gridlock-pref
+            best_strat = S*(i-1) + findmin(strategy_table_payoffs[i,:])[2]
+            vote[i] = strategy_tables[best_strat,local_history[i]]
         end
     end
 
@@ -75,34 +75,31 @@ for t=1:T
     cur_vote = sum(vote) # sum of the current votes
     if cur_vote < N/2
         majority = 0 # blue is majority
-        ts_output_majority[t] = 0
     elseif cur_vote > N/2
         majority = 1 # red is majority
-        ts_output_majority[t] = 1
-    elseif rand() ≤ 1/2
+    elseif rand() < 1/2
         majority = 0 # blue is majority
-        ts_output_majority[t] = 0
     else
         majority = 1 # red is majority
-        ts_output_majority[t] = 1
     end
 
     # Record strategy distributions
     ts_output_red[t,:] = [sum(x->x==1,strategy.*party)/N,sum(x->x==2,strategy.*party)/N,sum(x->x==3,strategy.*party)/N,sum(x->x==4,strategy.*party)/N,sum(x->x==5,strategy.*party)/N,sum(x->x==6,strategy.*party)/N,sum(x->x==7,strategy.*party)/N]
     ts_output_blue[t,:] = [sum(x->x==1,strategy)/N,sum(x->x==2,strategy)/N,sum(x->x==3,strategy)/N,sum(x->x==4,strategy)/N,sum(x->x==5,strategy)/N,sum(x->x==6,strategy)/N,sum(x->x==7,strategy)/N] .- ts_output_red[t,:]
+    ts_output_majority[t] = maximum([cur_vote,N-cur_vote])/N
 
     # Determine payoffs for strategy tables
-    for j=1:N
-        cur_party = party[j]
-        for k=1:S
-            if majority == cur_party == strategy_tables[2*j-1,local_history[j]]
-                strategy_table_payoffs[j,k] += 1
-            elseif majority == strategy_tables[2*j-1,local_history[j]] != cur_party
-                strategy_table_payoffs[j,k] += 1/2
-            elseif majority != cur_party == strategy_tables[2*j-1,local_history[j]]
-                strategy_table_payoffs[j,k] -= 1/2
+    for i=1:N
+        cur_party = party[i]
+        for j=1:S
+            if majority == cur_party == strategy_tables[2*i-1,local_history[i]]
+                strategy_table_payoffs[i,j] += 1
+            elseif majority == strategy_tables[2*i-1,local_history[i]] != cur_party
+                strategy_table_payoffs[i,j] += 1/2
+            elseif majority != cur_party == strategy_tables[2*i-1,local_history[i]]
+                strategy_table_payoffs[i,j] -= 1/2
             else
-                strategy_table_payoffs[j,k] -= 1
+                strategy_table_payoffs[i,j] -= 1
             end
         end
     end
@@ -116,7 +113,7 @@ for t=1:T
         end
         cur_party = party[j]
         cur_vote = vote[j]
-        if strategy[j] < 4 # for those who value consensus (note this includes zealots)
+        if strategy[j] ∈ [1 3 5] # for those who value consensus (consensus-pref Chartists, Consensus-makers, consensus-pref Zealots)
             if local_majority == cur_party == cur_vote
                 payoffs[j] += local_majority - 1/2 # 1
             elseif local_majority == cur_vote != cur_party
@@ -126,7 +123,7 @@ for t=1:T
             else
                 payoffs[j] -= local_majority - 1/2 # 1
             end
-        elseif strategy[j] == 4 # Gridlockers for those who value consensus (note this includes zealots)
+        elseif strategy[j] ∈ [2 4 6]  # for those who value gridlock (gridlock-pref Chartists, Gridlockers, gridlock-pref Zealots)
             if local_majority != cur_party == cur_vote
                 payoffs[j] += 1 - local_majority # 1
             elseif local_majority != cur_vote != cur_party
@@ -136,7 +133,7 @@ for t=1:T
             else
                 payoffs[j] -= 1 - local_majority # 1
             end
-        else # Zealot Gridlockers for those who value consensus (note this includes zealots)
+        else # party-pref Zealots
             if local_majority == cur_party == cur_vote
                 payoffs[j] += local_majority - 1/2 # 1
             elseif local_majority !== cur_vote == cur_party
@@ -195,9 +192,9 @@ for t=1:T
     # Mutation
     for i=1:N
         if rand() ≤ μ
-            strategy[j]=rand(1:7)
-            if strategy[j] ∈ [5 6 7] # if neighbour is a zealot, adjust vote to be in line with party
-                vote[j] = party[j]
+            strategy[i]=rand(1:7)
+            if strategy[i] ∈ [5 6 7] # if neighbour is a zealot, adjust vote to be in line with party
+                vote[i] = party[i]
             end
         end
     end
@@ -205,8 +202,8 @@ for t=1:T
 end
 
 pyplot()
-ts_output = ts_output_blue + ts_output_red
-pl_blue = plot(1:num_turns,ts_output_blue,label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=bottom)
-pl_red = plot(1:num_turns,ts_output_red,label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=bottom)
-pl = plot(1:num_turns,ts_output,label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=bottom)
+ts_output = ts_output_blue .+ ts_output_red
+pl_blue = plot(1:T,hcat(ts_output_blue,ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
+pl_red = plot(1:T,hcat(ts_output_red,ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
+pl = plot(1:T,hcat(ts_output,ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
 plot(pl_blue, pl_red, pl, layout=(3, 1))
