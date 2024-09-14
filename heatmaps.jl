@@ -8,10 +8,10 @@ G = 50 # number of games to average over
 M = 3 # memory length
 N = 350 # number of players
 T = 250 # number of turns
-p = 0.02 # probability of joining two players of the same party
-q = 0.02 # probability of joining two players of the different party
+p = 1#0.02 # probability of joining two players of the same party
+q = 1#0.02 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.5 # party affiliation bias
+β = 0.8 # party affiliation bias
 μ = 0.01 # individual learning
 ϕ = 1 # weight of imitating the strategy of a player of the opposing party
 
@@ -64,7 +64,7 @@ for consensus_pref = 0:50:N
             for t=1:T
                 # Determine Chartists' votes
                 for i=1:N
-                    if strategy[i] ∈ [1 2] # if consensus-pref
+                    if strategy[i] ∈ [1 2] # if Chartist
                         best_strat = S*(i-1) + findmax(strategy_table_payoffs[i,:])[2]
                         vote[i] = strategy_tables[best_strat,local_history[i]]
                     end
@@ -231,7 +231,7 @@ for consensus_pref = 0:50:N
                     end
                 end
             end
-            avg_vote += mean(vote)
+            avg_vote += maximum([mean(vote),1-mean(vote)])
         end
         output[Int(consensus_pref/50)+1,Int(gridlock_pref/50)+1] = avg_vote/G
         global count = count + 1
