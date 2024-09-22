@@ -9,9 +9,11 @@ M = 3 # memory length
 N = 350 # number of players
 T = 250 # number of turns
 p = 0.02 # probability of joining two players of the same party
-q = 0.01 # probability of joining two players of the different party
+q = 0.02 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.2 # party affiliation bias
+β = 0.5 # party affiliation bias
+κ = 1
+ι = 0.5
 μ = 0.01 # individual learning
 ϕ = 1 # weight of imitating the strategy of a player of the opposing party
 
@@ -48,12 +50,10 @@ for consensus_pref = 0:50:N
             adjacency_matrix = [[] for i = 1:N]
             for i=1:N-1
                 for j=i+1:N
-                    # if party[i] == party[j] && rand(rng) ≤ p
-                    if party[i] == 0 && rand(rng) ≤ p
+                    if party[i] == party[j] && rand(rng) ≤ p
                         push!(adjacency_matrix[i],j)
                         push!(adjacency_matrix[j],i)
-                    # elseif party[i] != party[j] && rand(rng) ≤ q
-                    elseif party[i] == 1 && rand(rng) ≤ q
+                    elseif party[i] != party[j] && rand(rng) ≤ q
                         push!(adjacency_matrix[i],j)
                         push!(adjacency_matrix[j],i)
                     end
@@ -175,8 +175,8 @@ for consensus_pref = 0:50:N
                     if adjacency_matrix[i] != [] # imitate a randomly selected neighbour
                         neighbour = rand(adjacency_matrix[i])
                         if party[i]==party[neighbour]
-                            #imitate = ι/(1+exp(κ*(payoffs[i]-payoffs[neighbour])))
-                            imitate = (2+payoffs[neighbour]-payoffs[i])/4 # probability of imitating a neighbour of the same party
+                            imitate = ι/(1+exp(κ*(payoffs[i]-payoffs[neighbour])))
+                            #(2+payoffs[neighbour]-payoffs[i])/4 # probability of imitating a neighbour of the same party
                         else
                             if strategy[neighbour] ∈ [1 3 5]
                                 if payoffs[neighbour] == 1
@@ -188,8 +188,8 @@ for consensus_pref = 0:50:N
                                 else payoffs[neighbour] == 1/2
                                     neighbour_payoff = 1
                                 end
-                                #imitate = ι*ϕ/(1+exp(κ*(payoffs[i]-neighbour_payoff)))
-                                imitate = ϕ*(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
+                                imitate = ι*ϕ/(1+exp(κ*(payoffs[i]-neighbour_payoff)))
+                                #(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
                             elseif strategy[neighbour] ∈ [2 4 6]
                                 if payoffs[neighbour] == -1/2
                                     neighbour_payoff = -1
@@ -200,12 +200,12 @@ for consensus_pref = 0:50:N
                                 else payoffs[neighbour] == -1
                                     neighbour_payoff = -1/2
                                 end
-                                #imitate = ι*ϕ/(1+exp(κ*(payoffs[i]-neighbour_payoff)))
-                                imitate = ϕ*(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
+                                imitate = ι*ϕ/(1+exp(κ*(payoffs[i]-neighbour_payoff)))
+                                #ϕ*(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
                             else
                                 neighbour_payoff = -payoffs[neighbour]
-                                #imitate = ι*ϕ/(1+exp(κ*(payoffs[i]-neighbour_payoff)))
-                                imitate = ϕ*(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
+                                imitate = ι*ϕ/(1+exp(κ*(payoffs[i]-neighbour_payoff)))
+                                #ϕ*(2+neighbour_payoff-payoffs[i])/4 # probability of imitating a neighbour of a different party
                             end
                         end
                         if rand(rng) ≤ imitate
@@ -246,4 +246,4 @@ pyplot()
 heatmap(0:7, 0:7, output, xlabel="Consensus-preferring non-Zealots", ylabel="Gridlock-preferring non-Zealots", 
 colorbar_title="Votes for majority", thickness_scaling = 1.5, clim=(0.5,1),
 xticks=([0,3.5,7],["0", "0.5", "1"]),yticks=([0,3.5,7],["0", "0.5", "1"]))
-savefig("heatmap_beta_$(β)_phi_$(ϕ)_pblue_$(p)_qred_$(q).pdf")
+savefig("heatmap_bias_$(β)_homophily_$(ϕ)_p_$(p)_q_($q)_imitation_($ι).pdf")

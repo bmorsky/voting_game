@@ -4,12 +4,12 @@ using Distributions, Plots, Random, Statistics
 M = 3 # memory length
 N = 350 # number of players
 T = 1000 # number of turns
-p = 0.02 # probability of joining two players of the same party
-q = 0.02 # probability of joining two players of the different party
+p = 0.01 # probability of joining two players of the same party
+q = 0.01 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.8 # party affiliation bias
+β = 0.5 # party affiliation bias
 μ = 0.01 # individual learning
-ϕ = 0.01 # weight of imitating the strategy of a player of the opposing party
+ϕ = 1 # weight of imitating the strategy of a player of the opposing party
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
@@ -239,7 +239,9 @@ end
 
 pyplot()
 ts_output = ts_output_blue .+ ts_output_red
-pl_blue = plot(1:T,hcat(ts_output_blue*N/(N-sum(party)),ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
-pl_red = plot(1:T,hcat(ts_output_red*N/sum(party),ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
+pl_blue = plot(1:T,hcat(ts_output_blue*N/(N-sum(party)),ts_output_majority),ylims=(0,0.2),
+label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
+pl_red = plot(1:T,hcat(ts_output_red*N/sum(party),ts_output_majority),ylims=(0,0.2),
+label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
 pl = plot(1:T,hcat(ts_output,ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
 plot(pl_blue, pl_red, pl, layout=(3, 1))
