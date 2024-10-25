@@ -8,10 +8,10 @@ G = 50 # number of games to average over
 M = 3 # memory length
 N = 350 # number of players
 T = 250 # number of turns
-p = 0.02 # probability of joining two players of the same party
-q = 0.01 # probability of joining two players of the different party
+p = 0.005 # probability of joining two players of the same party
+q = 0.035 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.2 # party affiliation bias
+β = 0.5 # party affiliation bias
 μ = 0.01 # individual learning
 ϕ = 1 # weight of imitating the strategy of a player of the opposing party
 
@@ -48,12 +48,12 @@ for consensus_pref = 0:50:N
             adjacency_matrix = [[] for i = 1:N]
             for i=1:N-1
                 for j=i+1:N
-                    # if party[i] == party[j] && rand(rng) ≤ p
-                    if party[i] == 0 && rand(rng) ≤ p
+                    if party[i] == party[j] && rand(rng) ≤ p
+                    # if party[i] == 0 && rand(rng) ≤ p
                         push!(adjacency_matrix[i],j)
                         push!(adjacency_matrix[j],i)
-                    # elseif party[i] != party[j] && rand(rng) ≤ q
-                    elseif party[i] == 1 && rand(rng) ≤ q
+                    elseif party[i] != party[j] && rand(rng) ≤ q
+                    # elseif party[i] == 1 && rand(rng) ≤ q
                         push!(adjacency_matrix[i],j)
                         push!(adjacency_matrix[j],i)
                     end
@@ -246,4 +246,5 @@ pyplot()
 heatmap(0:7, 0:7, output, xlabel="Consensus-preferring non-Zealots", ylabel="Gridlock-preferring non-Zealots", 
 colorbar_title="Votes for majority", thickness_scaling = 1.5, clim=(0.5,1),
 xticks=([0,3.5,7],["0", "0.5", "1"]),yticks=([0,3.5,7],["0", "0.5", "1"]))
-savefig("heatmap_beta_$(β)_phi_$(ϕ)_pblue_$(p)_qred_$(q).pdf")
+savefig("heatmap_beta_$(β)_phi_$(ϕ)_p_$(p)_q_$(q).pdf")
+# savefig("heatmap_beta_$(β)_phi_$(ϕ)_pblue_$(p)_qred_$(q).pdf")
