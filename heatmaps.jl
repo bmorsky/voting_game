@@ -4,12 +4,12 @@ using Distributions, Plots, Random, Statistics, Graphs
 output = fill(NaN,(8,8))
 
 # Parameters
-G = 1 # number of games to average over
+G = 50 # number of games to average over
 M = 3 # memory length
 N = 350 # number of players
-T = 2 # number of turns
-p = 0.005 # probability of joining two players of the same party
-q = 0.035 # probability of joining two players of the different party
+T = 250 # number of turns
+p = 0.05 # probability of joining two players of the same party
+q = 0.05 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
 β = 0.5 # party affiliation bias
 μ = 0.01 # individual learning
