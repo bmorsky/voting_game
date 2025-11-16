@@ -8,14 +8,14 @@ G = 50 # number of games to average over
 M = 3 # memory length
 N = 350 # number of players
 T = 250 # number of turns
-p = 0.05 # probability of joining two players of the same party
-q = 0.05 # probability of joining two players of the different party
+p = 0.2 # probability of joining two players of the same party
+q = 0.2 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.5 # party affiliation bias
+β = 0.8 # party affiliation bias
 μ = 0.01 # individual learning
-ϕ = 1 # weight of imitating the strategy of a player of the opposing party
+ϕ = 0.1 # weight of imitating the strategy of a player of the opposing party
 rewire = 0.0 # rewiring probability for Watts-Strogatz graph
-connect= 8 # initial number of neighbors for Watts-Strogatz graph has to be even
+connect= 70 # initial number of neighbors for Watts-Strogatz graph has to be even
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
 dist = Binomial(1,β) # binomial distribution
@@ -45,7 +45,11 @@ for consensus_pref = 0:50:N
             # 1=consensus_Chartists, 2=gridlock_Chartists, 3=Consensus_makers, 4=Gridlockers,
             # 5=consensus_Zealots, 6=gridlock_Zealots, 7=party_Zealots
             strategy = vcat(ones(Int,consensus_Chartists),2*ones(Int,gridlock_Chartists),3*ones(Int,Consensus_makers),4*ones(Int,Gridlockers),5*ones(Int,consensus_Zealots),6*ones(Int,gridlock_Zealots),7*ones(Int,party_Zealots))
-            # Generate Erdos-Renyi random graph
+            # Generate Erdos-Renyi random graph, comment out "graph"
+            # adjacency_matrix = [[] for i = 1:N]
+            # Generate a Barabasi-Albert graph
+            # graph = barabasi_albert(n, m0, m)
+            #Generate Watts-Strogatz graph
             graph = watts_strogatz(N, connect, rewire; is_directed=false)
             adjacency_matrix = [collect(neighbors(graph, i)) for i = 1:N]
             for i=1:N-1
@@ -248,6 +252,6 @@ pyplot()
 heatmap(0:7, 0:7, output, xlabel="Consensus-preferring non-Zealots", ylabel="Gridlock-preferring non-Zealots", 
 colorbar_title="Votes for majority", thickness_scaling = 1.5, clim=(0.5,1),
 xticks=([0,3.5,7],["0", "0.5", "1"]),yticks=([0,3.5,7],["0", "0.5", "1"]))
-savefig("heatmap_beta_$(β)_phi_$(ϕ)_p_$(p)_q_$(q).pdf")
+savefig("Wattsheatmap_beta_$(β)_phi_$(ϕ)_p_$(p)_q_$(q),connect=$connect.pdf")
 # savefig("heatmap_beta_$(β)_phi_$(ϕ)_pblue_$(p)_qred_$(q).pdf")
 end
