@@ -16,6 +16,8 @@ S = 2 # number of strategy tables per player
 ϕ = 0.1 # weight of imitating the strategy of a player of the opposing party
 rewire = 0.0 # rewiring probability for Watts-Strogatz graph
 connect= 70 # initial number of neighbors for Watts-Strogatz graph has to be even
+b0 = 5 # initial number of nodes for Barabasi-Albert graph
+b = 3 # number of edges to attach from a new node to existing nodes for Barabasi-Albert graph
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
 dist = Binomial(1,β) # binomial distribution
@@ -48,18 +50,18 @@ for consensus_pref = 0:50:N
             # Generate Erdos-Renyi random graph, comment out "graph"
             # adjacency_matrix = [[] for i = 1:N]
             # Generate a Barabasi-Albert graph
-            # graph = barabasi_albert(n, m0, m)
+            # graph = barabasi_albert(N, b0, b)
             #Generate Watts-Strogatz graph
             graph = watts_strogatz(N, connect, rewire; is_directed=false)
             adjacency_matrix = [collect(neighbors(graph, i)) for i = 1:N]
             for i=1:N-1
                 for j=i+1:N
-                    if party[i] == party[j] && rand(rng) ≤ p
-                    # if party[i] == 0 && rand(rng) ≤ p
+                    #if party[i] == party[j] && rand(rng) ≤ p #Normal simulations
+                    if party[i] == 0 && rand(rng) ≤ p #One party connects more
                         push!(adjacency_matrix[i],j)
                         push!(adjacency_matrix[j],i)
-                    elseif party[i] != party[j] && rand(rng) ≤ q
-                    # elseif party[i] == 1 && rand(rng) ≤ q
+                    #elseif party[i] != party[j] && rand(rng) ≤ q #Normal simulations
+                    elseif party[i] == 1 && rand(rng) ≤ q #One party connects more
                         push!(adjacency_matrix[i],j)
                         push!(adjacency_matrix[j],i)
                     end
