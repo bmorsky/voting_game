@@ -1,15 +1,19 @@
-using Distributions, Plots, Random, Statistics
+using Distributions, Plots, Random, Statistics, Graphs
 
 # Parameters
 M = 3 # memory length
 N = 350 # number of players
-T = 1000 # number of turns
+T = 100 # number of turns
 p = 0.01 # probability of joining two players of the same party
 q = 0.01 # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.5 # party affiliation bias
+β = 0.8 # party affiliation bias
 μ = 0.01 # individual learning
-ϕ = 1 # weight of imitating the strategy of a player of the opposing party
+ϕ = 0.1 # weight of imitating the strategy of a player of the opposing party
+rewire = 0.0 # rewiring probability for Watts-Strogatz graph
+connect= 8 # initial number of neighbors for Watts-Strogatz graph has to be even
+b0 = 5 # initial number of nodes for Barabasi-Albert graph
+b = 3 # number of edges to attach from a new node to existing nodes for Barabasi-Albert graph
 
 # Random numbers
 rng = MersenneTwister() # pseudorandom number generator
@@ -42,10 +46,15 @@ vote = copy(party) # vector of the votes each player makes
 # strategy is the vector of the initial strategies for each player
 # 1=consensus_Chartists, 2=gridlock_Chartists, 3=Consensus_makers, 4=Gridlockers,
 # 5=consensus_Zealots, 6=gridlock_Zealots, 7=party_Zealots
-strategy = vcat(ones(Int,consensus_Chartists),2*ones(Int,gridlock_Chartists),3*ones(Int,Consensus_makers),4*ones(Int,Gridlockers),5*ones(Int,consensus_Zealots),6*ones(Int,gridlock_Zealots),7*ones(Int,party_Zealots),) 
+strategy = vcat(ones(Int,consensus_Chartists),2*ones(Int,gridlock_Chartists),3*ones(Int,Consensus_makers),4*ones(Int,Gridlockers),5*ones(Int,consensus_Zealots),6*ones(Int,gridlock_Zealots),7*ones(Int,party_Zealots))
 
-# Generate Erdos-Renyi random graph
-adjacency_matrix = [[] for i = 1:N]
+# Generate Erdos-Renyi random graph, comment out "graph"
+            # adjacency_matrix = [[] for i = 1:N]
+            # Generate a Barabasi-Albert graph
+            # graph = barabasi_albert(N, b0, b)
+            #Generate Watts-Strogatz graph
+graph = watts_strogatz(N, connect, rewire; is_directed=false)
+adjacency_matrix = [collect(neighbors(graph, i)) for i = 1:N]
 for i=1:N-1
     for j=i+1:N
         if party[i] == party[j] && rand(rng) ≤ p
@@ -60,6 +69,7 @@ end
 
 # Run a single realization
 for t=1:T
+    global strategy, vote, payoffs, local_history, strategy_table_payoffs, strategy_tables
     # Determine Chartists' votes
     for i=1:N
         if strategy[i] ∈ [1 2] # if consensus-pref
@@ -239,9 +249,13 @@ end
 
 pyplot()
 ts_output = ts_output_blue .+ ts_output_red
-pl_blue = plot(1:T,hcat(ts_output_blue*N/(N-sum(party)),ts_output_majority),ylims=(0,0.2),
-label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
-pl_red = plot(1:T,hcat(ts_output_red*N/sum(party),ts_output_majority),ylims=(0,0.2),
-label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
-pl = plot(1:T,hcat(ts_output,ts_output_majority),label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],position=:outerright)
+pl_blue = plot(1:T,hcat(ts_output_blue*N/(N-sum(party)),ts_output_majority),ylims=(0,0.6),
+#label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"]
+label=false,position=:outerright)
+pl_red = plot(1:T,hcat(ts_output_red*N/sum(party),ts_output_majority),ylims=(0,0.6),
+#label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],
+label=false, position=:outerright)
+pl = plot(1:T,hcat(ts_output,ts_output_majority),
+#label=["consensus-pref Chartists" "gridlock-pref Chartists" "Consensus-makers" "Gridlockers" "consensus-pref Zealots" "gridlock-pref Zealots" "party-pref Zealots" "majority vote"],
+label=false, position=:outerright)
 plot(pl_blue, pl_red, pl, layout=(3, 1))
