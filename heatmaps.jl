@@ -8,14 +8,14 @@ G = 50 # number of games to average over
 M = 3 # memory length
 N = 350 # number of players
 T = 250 # number of turns
-p = 0.2 # probability of joining two players of the same party
-q = 0.2 # probability of joining two players of the different party
+p = 0.035 # probability of joining two players of the same party
+q = 0.005  # probability of joining two players of the different party
 S = 2 # number of strategy tables per player
-β = 0.8 # party affiliation bias
+β = 0.5 # party affiliation bias. 
 μ = 0.01 # individual learning
-ϕ = 0.1 # weight of imitating the strategy of a player of the opposing party
-rewire = 0.0 # rewiring probability for Watts-Strogatz graph
-connect= 70 # initial number of neighbors for Watts-Strogatz graph has to be even
+ϕ = 1 # weight of imitating the strategy of a player of the opposing party
+rewire = 0.05 # rewiring probability for Watts-Strogatz graph
+connect= 7 # initial number of neighbors for Watts-Strogatz graph has to be even
 b0 = 5 # initial number of nodes for Barabasi-Albert graph
 b = 3 # number of edges to attach from a new node to existing nodes for Barabasi-Albert graph
 # Random numbers
@@ -56,12 +56,12 @@ for consensus_pref = 0:50:N
             adjacency_matrix = [collect(neighbors(graph, i)) for i = 1:N]
             for i=1:N-1
                 for j=i+1:N
-                    #if party[i] == party[j] && rand(rng) ≤ p #Normal simulations
-                    if party[i] == 0 && rand(rng) ≤ p #One party connects more
+                    if party[i] == party[j] && rand(rng) ≤ p #Normal simulations
+                    #if party[i] == 0 && rand(rng) ≤ p #One party connects more
                         push!(adjacency_matrix[i],j)
                         push!(adjacency_matrix[j],i)
-                    #elseif party[i] != party[j] && rand(rng) ≤ q #Normal simulations
-                    elseif party[i] == 1 && rand(rng) ≤ q #One party connects more
+                    elseif party[i] != party[j] && rand(rng) ≤ q #Normal simulations
+                    #elseif party[i] == 1 && rand(rng) ≤ q #One party connects more
                         push!(adjacency_matrix[i],j)
                         push!(adjacency_matrix[j],i)
                     end
@@ -254,6 +254,6 @@ pyplot()
 heatmap(0:7, 0:7, output, xlabel="Consensus-preferring non-Zealots", ylabel="Gridlock-preferring non-Zealots", 
 colorbar_title="Votes for majority", thickness_scaling = 1.5, clim=(0.5,1),
 xticks=([0,3.5,7],["0", "0.5", "1"]),yticks=([0,3.5,7],["0", "0.5", "1"]))
-savefig("Wattsheatmap_beta_$(β)_phi_$(ϕ)_p_$(p)_q_$(q),connect=$connect.pdf")
+savefig("Wattsheatmap_beta_$(β)_phi_$(ϕ)_p_$(p)_q_$(q),connect=$connect,rewire=$rewire.pdf")
 # savefig("heatmap_beta_$(β)_phi_$(ϕ)_pblue_$(p)_qred_$(q).pdf")
 end
